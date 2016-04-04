@@ -368,6 +368,8 @@
         toolbar: undefined,
         toolbarAlign: 'left',
         toolbarAlignClass: 'pull-xs-left',
+        toolbarOrder: ['paginationSwitch', 'refresh', 'toggle', 'columns'],
+        toolbarItems: {},
         checkboxHeader: true,
         sortable: true,
         silentSort: true,
@@ -1032,7 +1034,7 @@
 
     BootstrapTable.prototype.initToolbar = function () {
         var that = this,
-            html = [],
+            html = '',
             timeoutId = 0,
             $keepOpen,
             $search,
@@ -1049,54 +1051,58 @@
                 .append($(this.options.toolbar));
         }
 
-        // showColumns, showToggle, showRefresh
-        html = [sprintf('<div class="columns columns-%s btn-group pull-%s %s">',
-            this.options.buttonsAlign, this.options.buttonsAlign, this.options.buttonsAlignClass)];
-
         if (typeof this.options.icons === 'string') {
             this.options.icons = calculateObjectValue(null, this.options.icons);
         }
 
-        if (this.options.showPaginationSwitch) {
-            html.push(sprintf('<button class="btn' +
-                    sprintf(' btn-%s', this.options.buttonsClass) +
-                    '" type="button" name="paginationSwitch" title="%s">',
-                    this.options.formatPaginationSwitch()),
-                sprintf('<i class="%s %s"></i>', this.options.iconsPrefix, this.options.icons.paginationSwitchDown),
-                '</button>');
+        if(! this.options.toolbarItems.paginationSwitch) {
+            this.options.toolbarItems.paginationSwitch = {
+              'template' : sprintf('<button class="btn' +
+                      sprintf(' btn-%s', this.options.buttonsClass) +
+                      '" type="button" name="paginationSwitch" title="%s">',
+                      this.options.formatPaginationSwitch()) +
+                  sprintf('<i class="%s %s"></i>', this.options.iconsPrefix, this.options.icons.paginationSwitchDown) +
+                  '</button>'
+            };
         }
 
-        if (this.options.showRefresh) {
-            html.push(sprintf('<button class="btn' +
+        if(! this.options.toolbarItems.refresh) {
+            this.options.toolbarItems.refresh = {
+                'template' : sprintf('<button class="btn' +
+                        sprintf(' btn-%s', this.options.buttonsClass) +
+                        sprintf(' btn-%s', this.options.iconSize) +
+                        '" type="button" name="refresh" title="%s">',
+                        this.options.formatRefresh()) +
+                    sprintf('<i class="%s %s"></i>', this.options.iconsPrefix, this.options.icons.refresh) +
+                    '</button>'
+            };
+        }
+
+        if(! this.options.toolbarItems.toggle) {
+            this.options.toolbarItems.toggle = {
+                'template' : sprintf('<button class="btn' +
+                        sprintf(' btn-%s', this.options.buttonsClass) +
+                        sprintf(' btn-%s', this.options.iconSize) +
+                        '" type="button" name="toggle" title="%s">',
+                        this.options.formatToggle()) +
+                    sprintf('<i class="%s %s"></i>', this.options.iconsPrefix, this.options.icons.toggle) +
+                    '</button>'
+            };
+        }
+
+        if(! this.options.toolbarItems.columns) {
+            this.options.toolbarItems.columns = {
+                'template' : sprintf('<div class="keep-open btn-group" title="%s">',
+                        this.options.formatColumns()) +
+                    '<button type="button" class="btn' +
                     sprintf(' btn-%s', this.options.buttonsClass) +
                     sprintf(' btn-%s', this.options.iconSize) +
-                    '" type="button" name="refresh" title="%s">',
-                    this.options.formatRefresh()),
-                sprintf('<i class="%s %s"></i>', this.options.iconsPrefix, this.options.icons.refresh),
-                '</button>');
-        }
-
-        if (this.options.showToggle) {
-            html.push(sprintf('<button class="btn' +
-                    sprintf(' btn-%s', this.options.buttonsClass) +
-                    sprintf(' btn-%s', this.options.iconSize) +
-                    '" type="button" name="toggle" title="%s">',
-                    this.options.formatToggle()),
-                sprintf('<i class="%s %s"></i>', this.options.iconsPrefix, this.options.icons.toggle),
-                '</button>');
-        }
-
-        if (this.options.showColumns) {
-            html.push(sprintf('<div class="keep-open btn-group" title="%s">',
-                    this.options.formatColumns()),
-                '<button type="button" class="btn' +
-                sprintf(' btn-%s', this.options.buttonsClass) +
-                sprintf(' btn-%s', this.options.iconSize) +
-                ' dropdown-toggle" data-toggle="dropdown">',
-                sprintf('<i class="%s %s"></i>', this.options.iconsPrefix, this.options.icons.columns),
-                ' <span class="caret"></span>',
-                '</button>',
-                '<ul class="dropdown-menu" role="menu">');
+                    ' dropdown-toggle" data-toggle="dropdown">' +
+                    sprintf('<i class="%s %s"></i>', this.options.iconsPrefix, this.options.icons.columns) +
+                    ' <span class="caret"></span>' +
+                    '</button>' +
+                    '<ul class="dropdown-menu" role="menu">'
+            };
 
             $.each(this.columns, function (i, column) {
                 if (column.radio || column.checkbox) {
@@ -1110,21 +1116,39 @@
                 var checked = column.visible ? ' checked="checked"' : '';
 
                 if (column.switchable) {
-                    html.push(sprintf('<li class="dropdown-item">' +
+                    that.options.toolbarItems.columns.template += sprintf('<li class="dropdown-item">' +
                         '<label><input type="checkbox" data-field="%s" value="%s"%s> %s</label>' +
-                        '</li>', column.field, i, checked, column.title));
+                        '</li>', column.field, i, checked, column.title)
+                    ;
+
                     switchableCount++;
                 }
             });
-            html.push('</ul>',
-                '</div>');
+
+            this.options.toolbarItems.columns.template += '</ul>' +
+                '</div>'
+            ;
         }
 
-        html.push('</div>');
+        html = sprintf('<div class="columns columns-%s btn-group pull-%s">',
+            this.options.buttonsAlign, this.options.buttonsAlign);
+
+        if(this.options.toolbarOrder) {
+            $.each(this.options.toolbarOrder, function(idx, toolbarName) {
+                if(that.options.toolbarItems.hasOwnProperty(toolbarName)) {
+                    var showName = 'show' + toolbarName.charAt(0).toUpperCase() + toolbarName.slice(1);
+                    if(that.options.hasOwnProperty(showName) && that.options[showName]) {
+                        html += that.options.toolbarItems[toolbarName].template;
+                    }
+                }
+            });
+        }
+
+        html += '</div>';
 
         // Fix #188: this.showToolbar is for extensions
         if (this.showToolbar || html.length > 2) {
-            this.$toolbar.append(html.join(''));
+            this.$toolbar.append(html);
         }
 
         if (this.options.showPaginationSwitch) {
